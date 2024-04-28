@@ -1,0 +1,13 @@
+services:
+  django:
+    container_name: django
+    build:
+      context: .
+      target: builder
+    ports:
+      - 8000:8000
+    environment:
+      - DEBUG=1
+      - SECRET_KEY=kIScawrtcAcFhlLm58EFsiMPYR7Ta1iywwuui39zDdsiSQa2qlLiuFfIR00CLtmm
+      - ALLOWED_HOSTS=localhost, 127.0.0.1
+
