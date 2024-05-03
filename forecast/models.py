@@ -1,4 +1,5 @@
 from django.db import models
+from colorfield.fields import ColorField
 
 class ForecastVariable(models.Model):
     TYPE_OPTIONS = {
@@ -232,28 +233,29 @@ class Position(models.Model):
         'FEMALE': 'Female',
         'MALE': 'Male'
     }
-    COLOR_CHOICES = {
-        "black": "Black",
-        "dimgray": "Dim Gray",
-        "gray": "Gray",
-        "darkgray": "Dark Gray",
-        "silver": "Silver",
-        "lightgray": "Light Gray",
-        "gainsboro": "Gainsboro",
-        "red": "Red",
-        "brown": "Brown",
-        "orangered": "Orange Red",
-        "orange": "Orange",
-        "yellow": "Yellow",
-        "yellowgreen": "Yellow Green",
-        "green": "Green",
-        "lightseagreen": "Light Green",
-        "aqua": "Aqua",
-        "deepskyblue": "Deep Sky Blue",
-        "royalblue": "Royal Blue",
-        "mediumslateblue": "Medium Slate",
-        "orchid": "Orchid"
-    }
+
+    COLOR_PALETTE = [
+        ('#000000', 'black'),
+        ('#696969', 'dimgray'),
+        ('#808080', 'gray'),
+        ('#A9A9A9', 'darkgray'),
+        ('#C0C0C0', 'silver'),
+        ('#D3D3D3', 'lightgray'),
+        ('#DCDCDC', 'gainsboro'),
+        ('#FF0000', 'red'),
+        ('#A52A2A', 'brown'),
+        ('#FF4500', 'orangered'),
+        ('#FFA500', 'orange'),
+        ('#FFFF00', 'yellow'),
+        ('#9ACD32', 'yellowgreen'),
+        ('#008000', 'green'),
+        ('#20B2AA', 'lightseagreen'),
+        ('#00FFFF', 'aqua'),
+        ('#00BFFF', 'deepskyblue'),
+        ('#4169E1', 'royalblue'),
+        ('#7B68EE', 'mediumslateblue'),
+        ('#DA70D6', 'orchid')
+    ]
     MINIMUM_AGE_CHOICES = {
         0: "No minimum age",
         16: "16 years old",
@@ -264,7 +266,7 @@ class Position(models.Model):
     active = models.BooleanField(default=True)
     type = models.CharField(max_length=64, choices=TYPE_CHOICES)
     team = models.ForeignKey("teams.Team", on_delete=models.CASCADE)
-    color = models.CharField(max_length=64, choices=COLOR_CHOICES)
+    color = ColorField(choices=COLOR_PALETTE)
     minimum_age = models.IntegerField(choices=MINIMUM_AGE_CHOICES)
     gender_specific = models.BooleanField(default=False)
     required_gender = models.CharField(max_length=64, null=True, blank=True, choices=GENDER_CHOICES)

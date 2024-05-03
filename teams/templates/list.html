@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Home Page{%endblock%}
+{%block content%}
+<ul class="text-lg space-y-8">
+    {% for team in managed %}
+        <li class="font-bold">{{team.name}}
+
+
+            <ul class="font-normal list-disc list-inside">
+               {% for emp in team.team_members.all %}
+                    <li>{{emp.first_name}} {{emp.last_name}}</li>
+               {% endfor %} 
+            </ul>
+        </li>
+    {% endfor %}
+</ul>
+
+{%endblock%}

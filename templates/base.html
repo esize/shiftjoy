@@ -1,0 +1,20 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Django App{% endblock %}</title>
+    <link href="{% static 'src/styles.css' %}" rel="stylesheet">
+</head>
+<body class="">
+    <nav class="py-4 px-8 w-full bg-slate-800 flex space-x-3 items-center text-white">
+        <a href="/"><h1 class="font-bold text-xl">Shift-to-Shift</h1></a>
+        <a href="/teams"><p class="font-medium text-md">Teams</p]></a>
+    </nav>
+    <main class="my-4 mx-8">
+        {% block content %}
+        {% endblock %}
+    </main>
+</body>
+</html>

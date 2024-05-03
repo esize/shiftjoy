@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from django.db import models
+from mptt.models import MPTTModel, TreeForeignKey
 
 from forecast.models import Skill
 
@@ -36,15 +37,15 @@ class Location(models.Model):
     def __str__(self):
         return self.name
 
-class Team(models.Model):
+class Team(MPTTModel):
     name = models.CharField(max_length=256)
     abbreviation = models.CharField(max_length=5, blank=True)
     location = models.ForeignKey(Location, on_delete=models.CASCADE)
     active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    parent_team = models.ForeignKey('self', blank=True, null=True, on_delete=models.CASCADE)
-    start_of_day = models.TimeField()
+    start_of_day = models.TimeField(default='00:00:00')
+    parent = TreeForeignKey('self', blank=True, null=True, on_delete=models.CASCADE, related_name='children')
 
     def __str__(self):
         return self.name
