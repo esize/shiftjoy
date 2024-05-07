@@ -1,11 +1,17 @@
 from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.forms import ValidationError
 
 from forecast.models import Skill
 from teams.models import Team
 
+def validate_num_str(value):
+    if not value.isnumeric():
+        raise ValidationError(_("%(value) is not a valid Employee ID number"), params={"value": value})
 
-class Employee(models.Model):
+
+class Employee(AbstractUser):
     STATUS_CHOICES = {
         'ONBOARDING': 'Onboarding',
         'ACTIVE': 'Active',
@@ -25,19 +31,26 @@ class Employee(models.Model):
         'VARIABLE': 'Variable',
         'TEMPORARY_FULL_TIME': 'Temporary Full Time',
     }
-    user = models.OneToOneField(User, on_delete=models.CASCADE, blank=True, null=True)
+    username = models.CharField(max_length=8, validators=[validate_num_str], unique=True, verbose_name='Employee ID')
     first_name = models.CharField(max_length=256)
     last_name = models.CharField(max_length=256)
-    home_team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='team_members')
-    employee_id = models.CharField(max_length=256)
+    home_team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='team_members', blank=True, null=True)
     email = models.CharField(max_length=256, blank=True, null=True)
     phone = models.CharField(max_length=256, blank=True, null=True)
     date_of_birth = models.DateField(blank=True, null=True)
     status = models.CharField(max_length=256, choices=STATUS_CHOICES, default='ACTIVE')
-    type = models.CharField(max_length=256, choices=TYPE_CHOICES, default='PART_TIME')
+    employment_type = models.CharField(max_length=256, choices=TYPE_CHOICES, default='PART_TIME')
     managed_teams = models.ManyToManyField(Team, related_name="managed_by", blank=True)
+
+    def get_employee_id(self):
+        return self.username
+
     def __str__(self):
         return self.first_name + ' ' + self.last_name
+    
+    class Meta:
+        verbose_name = 'Employee'
+        verbose_name_plural = 'Employees'
 
 
 class EmployeeSkill(models.Model):

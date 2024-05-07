@@ -1,6 +1,6 @@
 services:
-  django:
-    container_name: django
+  web:
+    container_name: web
     build:
       context: .
       target: builder

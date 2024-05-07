@@ -1,5 +1,8 @@
 from django.db import models
 from colorfield.fields import ColorField
+from django.core.exceptions import ValidationError
+from datetime import datetime
+import re
 
 class ForecastVariable(models.Model):
     TYPE_OPTIONS = {
@@ -14,7 +17,8 @@ class ForecastVariable(models.Model):
     FORMAT_OPTIONS = {
         "TIME": 'Time',
         "TEXT": 'Text',
-        "NUMBER": 'Number'
+        "NUMBER": 'Number',
+        "BOOLEAN": 'Boolean'
     }
     name = models.CharField(max_length=64)
     active = models.BooleanField(default=True)
@@ -28,6 +32,39 @@ class ForecastVariable(models.Model):
     offset_hours = models.IntegerField(null=True, blank=True)
     location = models.ForeignKey("teams.Location", on_delete=models.SET_NULL, null=True, blank=True)
     behaviors = models.ManyToManyField("VariableBehavior", blank=True)
+
+    # def clean(self) -> None:
+    #     if self.type == 'CALCULATED':
+    #         if self.calculated_default_value is None:
+    #             raise ValidationError("A default value is required.")
+    #         if self.default_value is not None:
+    #             raise ValidationError("The default value of a calculated field must be a calculated value.")
+    #         if self.offset_linked_variable is not None:
+    #             raise ValidationError("Offset variables can't be set on a calculated variable.")
+                      
+        
+    #     if self.type == 'VALUE':
+    #         if self.default_value is None:
+    #             raise ValidationError("A default value is required.")
+    #         if self.calculated_default_value is not None:
+    #             raise ValidationError("Calculated value can only be set on calculated fields.")
+    #         if self.offset_linked_variable is not None:
+    #             raise ValidationError("Offset variables can't be set on a value variable.")
+        
+
+    #     if self.type == 'OFFSET':
+    #         if self.offset_linked_variable is None:
+    #             raise ValidationError("A linked variable is required.")
+    #         if self.calculated_default_value is not None:
+    #             raise ValidationError("Calculated value can only be set on calculated fields.")
+    #         if self.default_value is not None:
+    #             raise ValidationError("The default value can only be set on a value variable.")
+    #         if self.offset_days is None and self.offset_hours is None:
+    #             raise ValidationError("Offset hours or days must be set")
+    #         if self.behaviors is not None:
+    #             raise ValidationError("Behaviors may not be set on an offset variable")    
+        
+
 
     def __str__(self):
         if not self.active:
@@ -45,10 +82,23 @@ class CalculatedValue(models.Model):
     value = models.CharField(max_length=64, null=True, blank=True)
     value_variable = models.ForeignKey(ForecastVariable, on_delete=models.SET_NULL, null=True, blank=True)
 
+    # def clean(self) -> None:
+        # if self.value is None and self.value_variable is None:
+        #     raise ValidationError("A value or variable must be set explicitly (use zero if necessary)")
+        
+        # if self.value is not None and self.value_variable is not None:
+        #     raise ValidationError("Value and variable cannot both be set")
+        
+        # if self.variable.type is not "TIME" or "NUMBER":
+        #     raise ValidationError("Numeric operations cannot be performed on text field")
+        
+        # if self.value_variable.type is not "TIME" or "NUMBER":
+        #     raise ValidationError("Numeric operations cannot be performed on text field")
+
     def __str__(self):
         if self.value_variable is not None:
-            return str(self.variable.name) + self.operator + str(self.value_variable.name)
-        return str(self.variable.name) + self.operator + str(self.value)
+            return f"{str(self.variable.name)} {'+' if self.operator == 'ADD' else '-'} {str(self.value_variable.name)}"
+        return f"{str(self.variable.name)} {'+' if self.operator == 'ADD' else '-'} {str(self.value)}"
 
 
 class Condition(models.Model):
@@ -65,17 +115,39 @@ class Condition(models.Model):
     comparison_variable = models.ForeignKey(ForecastVariable, on_delete=models.CASCADE, null=True, blank=True, related_name='conditions_referencing_as_comparison_variable')
     comparison_value = models.CharField(max_length=64, null=True, blank=True)
 
+    # def clean(self) -> None:
+    #     if self.variable.type is not "TIME" or "NUMBER":
+    #         if self.comparison_operator in ['LT', 'LE', 'GT', 'GE']:
+    #             raise ValidationError("Numeric comparisons cannot be performed on text field")\
+            
+    #     if self.comparison_variable.type != self.variable.type:
+    #         raise ValidationError("Variable and comparison variable must be the same type")
+        
+    #     if self.comparison_value is None and self.comparison_variable is None:
+    #         raise ValidationError("Value or variable must be defined for a valid comparison.")
+        
+    #     if self.comparison_value is not None and self.comparison_variable is not None:
+    #         raise ValidationError("Variable and value cannot both be defined.")
+
+
     def __str__(self):
         if self.comparison_variable is not None:
-            return str(self.variable.name) + self.comparison_operator + str(self.comparison_variable.name)
-        return str(self.variable.name) + self.comparison_operator + str(self.comparison_value)
+            return f"{str(self.variable.name)} {self.COMPARISON_OPERATOR_OPTIONS[self.comparison_operator]} {str(self.comparison_variable.name)}"
+        return f"{str(self.variable.name)} {self.COMPARISON_OPERATOR_OPTIONS[self.comparison_operator]} {str(self.comparison_value)}"
 
 
 class VariableBehavior(models.Model):
     name = models.CharField(max_length=100)
     conditions = models.ManyToManyField(Condition)
     value = models.CharField(max_length=64, null=True, blank=True)
-    value_variable = models.ForeignKey(ForecastVariable, on_delete=models.SET_NULL, null=True, blank=True)
+    value_calculated = models.ForeignKey(CalculatedValue, on_delete=models.SET_NULL, null=True, blank=True)
+
+    # def clean(self) -> None:
+    #     if self.value is not None and self.value_calculated is not None:
+    #         raise ValidationError("Value and calculation cannot both be defined.")
+        
+    #     if self.value is None and self.value_calculated is None:
+    #         raise ValidationError("Value or calculation must be defined.")
 
     def __str__(self):
         return self.name
@@ -185,10 +257,36 @@ class VariableInstance(models.Model):
     date = models.DateField(auto_now=False, auto_now_add=False)
     segment = models.CharField(max_length=64, null=True, blank=True, choices=SEGMENT_OPTIONS)
 
+    # def clean(self) -> None:
+    #     if self.variable.frequency != 'SEGMENT' and self.segment is not None:
+    #         raise ValidationError("Segment can only be set for a segment variable")
+    #     if self.variable.frequency == 'SEGMENT' and self.segment is None:
+    #         raise ValidationError("Segment must be defined for a segment variable.")
+        
+    #     if self.variable.format == 'TIME':
+    #         try:
+    #             self.value = datetime.strptime(self.value, '%H:%M').time()
+    #         except:
+    #             raise ValidationError("Invalid time value for time format.")
+    #         if self.value.timetuple().tm_min not in [0, 15, 30, 45]:
+    #             raise ValidationError("Variables can only be defined in 15 minute increments")
+            
+    #     if self.variable.format == 'BOOLEAN':
+    #         if self.value != 'True' or 'False':
+    #             raise ValidationError("Boolean variables must be True or False")
+            
+    #     if self.variable.format == 'TEXT':
+    #         if not re.match("^[a-z A-Z]+$", self.value):
+    #             raise ValidationError("Text fields may contain letters only")
+            
+    #     if self.variable.format == 'NUMBER':
+    #         if not self.value.isdigit():
+    #             raise ValidationError("Number fields must contain numbers only.")
+
     def __str__(self):
         if self.segment is not None:
-            return self.variable.name + ' - ' + self.date.__format__("%d/%m/%Y") + ' (' + self.segment + ")"
-        return self.variable.name + " - " + self.date.__format__("%d/%m/%Y")
+            return self.variable.name + ' - ' + self.date.__format__("%m/%d/%Y") + ' (' + self.segment + ")"
+        return self.variable.name + " - " + self.date.__format__("%m/%d/%Y")
 
 
 class Skill(models.Model):
@@ -209,13 +307,14 @@ class PositionBehavior(models.Model):
     name = models.CharField(max_length=64)
     active = models.BooleanField(default=True)
     conditions = models.ManyToManyField(Condition)
-    start_time_variable = models.ForeignKey(ForecastVariable, on_delete=models.CASCADE, related_name='start_time_variable')
+    start_time_variable = models.ForeignKey(ForecastVariable, on_delete=models.PROTECT, related_name='start_time_variable')
     start_time_operator = models.CharField(max_length=64, choices=OPERATOR_VALUES)
     start_time_calc_value = models.CharField(max_length=64)
-    end_time_variable = models.ForeignKey(ForecastVariable, on_delete=models.CASCADE, related_name='end_time_variable')
+    end_time_variable = models.ForeignKey(ForecastVariable, on_delete=models.PROTECT, related_name='end_time_variable')
     end_time_operator = models.CharField(max_length=64, choices=OPERATOR_VALUES)
     end_time_calc_value = models.CharField(max_length=64)
     number_required = models.IntegerField(default=0)
+    position = models.ForeignKey('Position', on_delete=models.CASCADE, related_name="behaviors")
 
     def __str__(self):
         if not self.active:
@@ -271,7 +370,13 @@ class Position(models.Model):
     gender_specific = models.BooleanField(default=False)
     required_gender = models.CharField(max_length=64, null=True, blank=True, choices=GENDER_CHOICES)
     skills = models.ManyToManyField(Skill)
-    behaviors = models.ManyToManyField(PositionBehavior)
+    unbudgeted = models.BooleanField(default=False)
+
+    def clean(self) -> None:
+        if self.gender_specific is True and self.required_gender is None:
+            raise ValidationError("Gender must be defined for gender specific role")
+        if self.gender_specific is False and self.required_gender is not None:
+            raise ValidationError("Required gender may not be set on a field that is not gender specific.")
 
     def __str__(self):
         if not self.active:

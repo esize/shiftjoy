@@ -31,6 +31,8 @@ ALLOWED_HOSTS = ["*"]
 # Application definition
 
 INSTALLED_APPS = [
+    "semantic_admin",
+    "semantic_forms",
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -39,6 +41,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     "django_browser_reload",
     "mptt",
+    'django_celery_results',
+    'django_celery_beat',
+    'rules.apps.AutodiscoverRulesConfig',
     "colorfield",
     "teams.apps.TeamsConfig",
     "forecast.apps.ForecastConfig",
@@ -76,6 +81,9 @@ TEMPLATES = [
 ]
 
 
+AUTH_USER_MODEL = "employees.Employee"
+
+
 WSGI_APPLICATION = 'shiftjoy.wsgi.application'
 
 
@@ -89,6 +97,11 @@ DATABASES = {
     }
 }
 
+
+AUTHENTICATION_BACKENDS = (
+    'rules.permissions.ObjectPermissionBackend',
+    'django.contrib.auth.backends.ModelBackend',
+)
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
@@ -114,7 +127,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/New_York'
 
 USE_I18N = True
 
@@ -132,9 +145,42 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://redis:6379/0')
-CELERY_RESULT_BACKEND = os.environ.get('CELERY_BACKEND', 'redis://redis:6379/0')
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/0')
+CELERY_RESULT_BACKEND = CELERY_RESULT_BACKEND = 'django-db'
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
+CELERY_TIMEZONE = 'America/New_York'
+CELERY_CACHE_BACKEND = 'default'
+
+# django setting.
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'my_cache_table',
+    }
+}
 
 
 LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "home"
+
+X_FRAME_OPTIONS = 'SAMEORIGIN'
+
+# SEMANTIC_APP_LIST = [
+#     {
+#         "app_label": "teams",
+#         "models": [{"object_name": "Organization"}, {"object_name": "Location"}, {"object_name": "Team"},]
+#     },
+#     {
+#         "app_label": "employees",
+#         "models": [{"object_name": "Employee"},]
+#     },
+#     {
+#         "app_label": "schedules",
+#         "models": [{"object_name": "Schedule"}, {"object_name": "SchedulePeriod"},]
+#     },
+#     {
+#         "app_label": "forecast",
+#         "models": [{"object_name": "ForecastVariable"}, {"object_name": "VariableInstance"}, {"object_name": "Position"},],
+#     },
+# ]
