@@ -2,7 +2,7 @@
 
 ## TODO
 - [x] Create models
-- [/] Create reusable js to hide form fields
+- [x] Create reusable js to hide form fields
 - [ ] Calculate variable values based on defaults
 - [ ] Calculate variable values based on other values
 - [ ] Variable values celery task
