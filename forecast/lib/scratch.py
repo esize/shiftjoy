@@ -4,8 +4,8 @@ from forecast.lib import get_days_in_week, get_variable_value
 
 
 def scratch():
-    w = get_days_in_week(date(2024,5,30))
-    v = ForecastVariable.objects.get(name="OPS - Kumba Closing - CALC")
+    w = get_days_in_week(date(2024,6,6))
+    v = ForecastVariable.objects.get(name="*BGT - PARK CLOSE")
 
     for d in w:
         val = get_variable_value(d,v)
