@@ -30,8 +30,8 @@ class ForecastVariable(models.Model):
     offset_linked_variable = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
     offset_days = models.IntegerField(null=True, blank=True)
     offset_hours = models.IntegerField(null=True, blank=True)
-    location = models.ForeignKey("teams.Location", on_delete=models.SET_NULL, null=True, blank=True)
-    behaviors = models.ManyToManyField("VariableBehavior", blank=True)
+    location = models.ForeignKey("teams.Location", on_delete=models.SET_NULL, null=True, blank=True, related_name='variables')
+    behaviors = models.ManyToManyField("VariableBehavior", blank=True, related_name='variables')
 
     # def clean(self) -> None:
     #     if self.type == 'CALCULATED':

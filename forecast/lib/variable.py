@@ -12,8 +12,10 @@ def get_days_in_week(start_date: date) -> list[date]:
 def infer_type(var):
     """Convert the variable value to its native python type"""
 
-    if var.value is not None:  # If a variable instance is passed in, use the variable value
+    try:  # If a variable instance is passed in, use the variable value
         var = var.value
+    except:
+        pass
 
     if 'True' in str(var):
         return True
@@ -45,13 +47,13 @@ def calc(formula: CalculatedValue, date: date):
 
     d = date
     if type(var1) == type(time()) and isinstance(var2, (int, float)):
-        print(var1)
+        # print(var1)
         dt1 = datetime(d.year, d.month, d.day, var1.hour,var1.minute)
         if operator == 'ADD':
             return (dt1 + timedelta(hours=var2)).time()
         return (dt1 - timedelta(hours=var2)).time()
     elif type(var1) == type(time()) and type(var2) == type(time()):
-        print(var1)
+        # print(var1)
         dt1 = datetime(d.year, d.month, d.day, var1.hour,var1.minute)
         if operator == 'ADD':
             return (dt1 + timedelta(hours=var2.hour,minutes=var2.minute)).time()
@@ -75,35 +77,41 @@ def get_variable_value(date: date, variable: ForecastVariable, update: bool=Fals
         `update`:
             Optional boolean specifying if an existing instance of `variable` on `date` should be overridden
     """
-    if not update:
+    if (not update):
         #  Check if the variable value already exists before doing a bunch of hard work
         try:
             return VariableInstance.objects.get(date=date, variable=variable)
         except:
             print(f"No instance of {variable} defined on {date.strftime('%m/%d/%Y')}")
 
-    #  Return default for value variables
     if variable.type == 'VALUE':
-        default = variable.default_value
-        return VariableInstance.objects.update_or_create(variable=variable, date=date, defaults={"value": default})
+        try:
+            return VariableInstance.objects.get(date=date, variable=variable)
+        except:  # Return the default value only if no other value has been set
+            default = variable.default_value
+            return VariableInstance.objects.update_or_create(variable=variable, date=date, defaults={"value": default})
 
 
     if variable.type == 'CALCULATED':
         #  Loop through behaviors. Use behavior value or value calculation if all conditions are met.
-        if len(variable.behaviors) > 0:  # Only loop through behaviors if they exist
+        if variable.behaviors.count() != 0:  # Only loop through behaviors if they exist
             for behavior in variable.behaviors.all():
                     for condition in behavior.conditions.all():
-                        var1_model = VariableInstance.objects.get(variable=condition.variable, date=date)
-                        var1 = infer_type(var1_model.value)
+                        try:
+                            var1_model = VariableInstance.objects.get(variable=condition.variable, date=date)[0]
+                        except:
+                            var1_model = get_variable_value(date, condition.variable)
+                        var1 = infer_type(var1_model)
 
                         if condition.comparison_value is not None:  # If the second value is just a value
                             var2 = infer_type(condition.comparison_value)
                         else:  # If the second value is another variable
-                            var2_model = VariableInstance.objects.get(variable=condition.comparison_variable, date=date)
                             try:
-                                var2 = VariableInstance.objects.get(variable=var2_model, date=date)
+                                var2_model = VariableInstance.objects.get(variable=condition.comparison_variable, date=date)[0]
                             except:
-                                ValueError("Comparison Variable not yet defined.")
+                                var2_model = get_variable_value(date, condition.comparison_variable)[0]
+
+                            var2 = infer_type(var2_model)
 
                         #  Evaluate expression based on text input
                         if condition.comparison_operator == "LT":

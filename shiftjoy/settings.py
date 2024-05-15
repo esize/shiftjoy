@@ -12,6 +12,10 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 import os
 from pathlib import Path
 
+from celery.schedules import crontab
+
+from forecast import tasks
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -151,6 +155,13 @@ CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
 CELERY_TIMEZONE = 'America/New_York'
 CELERY_CACHE_BACKEND = 'default'
+
+CELERY_BEAT_SCHEDULE = {
+    "generate_variables": {
+        "task": "forecast.tasks.generate_variables",
+        "schedule": crontab(minute="01", hour="00")
+    }
+}
 
 # django setting.
 CACHES = {

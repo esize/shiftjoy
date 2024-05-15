@@ -46,3 +46,14 @@ def populate_day_of_year_var(week: list[date]) -> list[VariableInstance]:
         except ValueError:
             raise ValueError
     return return_list
+
+def populate_weekly_defaults(week: list[date]) -> bool:
+    try:
+        populate_day_of_week_var(week)
+        populate_start_of_day_var(week)
+        populate_month_of_year_var(week)
+        populate_day_of_year_var(week)
+
+        return True
+    except:
+        raise Exception

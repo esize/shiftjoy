@@ -1,70 +1,31 @@
 from celery import shared_task
 from datetime import date, timedelta, datetime
 
-from forecast.lib import get_days_in_week
-
+from forecast.lib import get_days_in_week, get_variable_value, populate_weekly_defaults
 from .models import ForecastVariable, VariableInstance
+from teams.models import Location
 
 @shared_task
-def generate_variables(start_date):
-    dates = get_days_in_week(start_date)
+def generate_variables(run_date: datetime):  # Runs 18 days prior to schedule start date
+    if run_date is None:
+        run_date = datetime.today()
+    schedule_start_date = run_date + timedelta(days=18)
+    print(f"Start Date: {schedule_start_date.date()}")
+    schedule_start_weekday = schedule_start_date.strftime("%A")
+    print(f"Start Day: {schedule_start_weekday}")
+    
+    locations_to_generate = Location.objects.all().filter(day_week_starts=schedule_start_weekday.upper())  # For example, schedules that begin on thursday will generate variables on a sunday
+    if len(locations_to_generate) < 1:
+        return ValueError("No variable exists")
 
-    for date in dates:
-        for variable in ForecastVariable.objects.get(type='VALUE'):
-            VariableInstance.objects.create(
-                variable=variable,
-                value=variable.default_value,
-                date=date,
-            )
-        
-        for variable in ForecastVariable.objects.get(type='CALCULATED'):
-            var_val = ''
-            for behavior in variable.behaviors:
-                truthy = True
-                for condition in behavior:
-                    init = condition.variable.value
-                    if condition.comparison_value is not None:
-                        comp = condition.comparison_value
-                    else:
-                        comp = condition.comparison_variable.value
+    week_to_generate = get_days_in_week(schedule_start_date)
+    
+    populate_weekly_defaults(week=week_to_generate)
 
-                    if condition.comparison_operator == "LT":
-                        if init < comp:
-                            pass
-                        else:
-                            truthy=False
-                            break
-                    elif condition.comparison_operator == "LE":
-                        if init <= comp:
-                            pass
-                        else:
-                            truthy=False
-                            break
-                    elif condition.comparison_operator == "GT":
-                        if init > comp:
-                            pass
-                        else:
-                            truthy=False
-                            break
-                    elif condition.comparison_operator == "GE":
-                        if init >= comp:
-                            pass
-                        else:
-                            truthy=False
-                            break
-                    elif condition.comparison_operator == "EQ":
-                        if init == comp:
-                            pass
-                        else:
-                            truthy=False
-                            break
-                    elif condition.comparison_operator == "NE":
-                        if init != comp:
-                            pass
-                        else:
-                            truthy=False
-                            break
+    for location in locations_to_generate:
+        location_vars = location.variables.all()
 
-                if truthy:
-                    var_val = behavior.value
+        for v in location_vars:
+            for d in week_to_generate:
+                get_variable_value(d, v, update=True)
     
